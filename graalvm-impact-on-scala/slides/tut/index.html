@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>GraalVM's Impact on Scala</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body { font-family: 'Droid Serif', 'Helvetica'; }
+      h1, h2, h3 {
+        font-family: 'Yanone Kaffeesatz', 'Gill Sans';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono', 'Consolas', 'Courier New'; }
+      img {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+```tut:invisible
+
+```
+
+class: center, middle
+
+# GraalVMがScalaに与える影響について考えてみた
+
+2018/05/22 Scala勉強会 @ ファンコミュニケーションズ
+
+
+???
+- notes here
+- see https://remarkjs.com/#1
+
+---
+# 自己紹介
+
+- 酒井崇至 (Takayuki Sakai)
+- ファンコミュニケーションズ Tech Lead
+- 機械学習エンジニア / Scalaエンジニア
+- 週末仮想通貨botトレーダー
+---
+### 先月GraalVMという新しいJava実行環境がリリースされました
+.center[![graalvm_homepage](graalvm_homepage.png)]
+---
+# ScalaからJavaScriptを呼んでみる
+
+```tut:silent
+import org.graalvm.polyglot.Context
+val context = Context.create()
+```
+
+```tut:book
+1 + 1
+context.eval("js", "(1 + 1)").asInt
+```
+
+---
+```tut:book
+5 == "5"
+context.eval("js", "(5 == '5')").asBoolean
+context.eval("js", "(5 === '5')").asBoolean
+```
+---
+class: center, middle
+
+# Thanks!
+Code and slides at `takayuky/graalvm-impact-on-scala` on GitHub
+
+## Questions?
+
+
+
+
+
+ </textarea>
+    <script src="remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create();
+    </script>
+  </body>
+</html>
