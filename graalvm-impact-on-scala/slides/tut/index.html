@@ -17,26 +17,27 @@
       img {
         max-width: 100%;
       }
+      ul {
+        line-height: 40px;
+        font-size: x-large;
+      }
+      li > ul {
+        line-height: 35px;
+        font-size: large;
+      }
+      .narrow-code code {
+        line-height: 25px;
+      }
     </style>
   </head>
   <body>
     <textarea id="source">
-
-```tut:invisible
-
-```
 
 class: center, middle
 
 # GraalVMがScalaに与える影響について考えてみた
 
 2018/05/22 Scala勉強会 @ ファンコミュニケーションズ
-
-
-???
-- notes here
-- see https://remarkjs.com/#1
-
 ---
 # 自己紹介
 
@@ -46,10 +47,152 @@ class: center, middle
 - 週末仮想通貨botトレーダー
 ---
 ### 先月GraalVMという新しいJava実行環境がリリースされました
-.center[![graalvm_homepage](graalvm_homepage.png)]
+.center[![graalvm_homepage](images/graalvm_homepage.png)]
+---
+# What is GraalVM
+
+### すっごくざっくり
+
+- JVMみたいなもの
+- Oracleが作ってる
+- JVM言語以外も実行できる
+- 今までのJVMより速い
+- License: GPLv2
+---
+# Why GraalVM by 公式
+
+- Run Java Faster
+- Make Your Application Extensible
+- Create a Native Image
+---
+class: middle, center
+
+# Run Java Faster
+---
+# Run Java Faster
+
+- Javaで実装された新しいJITコンパイラ
+  - 今まではC++で実装されていた
+  - C2（HotSpotVMのC++版JITコンパイラ）はもうメンテがきついらしい
+  - C2作った人が、「今もう一度書くならC++では書かない」って言ってたらしい
+- 実行時のプロファイリングをもとに生成する機械語を最適化
+- 数十%くらい速くなるらしい
+- 詳しくは論文で
+---
+# もちろん Run Scala Faster でもある
+
+- むしろScalaのコードの方が高速化の恩恵大きい説
+  - なんかScalaのASTの方が高速化しやすいらしい
+.center[![graalvm_performance](images/graalvm_performance.png)]
+---
+class: middle, center
+
+# Make Your Application Extensible
+---
+# Make Your Application Extensible
+
+- GraalVMはJVM言語以外を実行できる
+  - JavaScript
+  - Ruby
+  - R
+  - Python3
+  - C
+- それぞれのNativeな実好環境より速かったりする
+  - RubyとRは特に顕著
+- JVM言語から他の言語を呼び出して、データのやり取りができる
+  - Polyglotと言う
+  - GraalVM内でデータをやり取りするので、JSONにシリアライズしたりするオーバーヘッドがない
+---
+### どうやって他の言語を実行できるの？
+
+1. Truffleというフレームワークを使ってソースコードをASTに変換
+  - AST = Abstract Syntax Tree
+2. あとはGraalが頑張る
+.center[![graal_stack](images/graal_stack.jpg)]
+---
+#### 赤で囲んだ部分さえ作れば、様々な言語をGraalVMで実行できる
+.center[![graal_stack_edited](images/graal_stack_edited.png)]
+
+#### それぞれの言語のTruffleモジュール
+- JavaScript -> Graal.js
+- Ruby -> TruffleRuby
+- R -> FastR
+---
+class: middle, center
+
+# Create a Native Image
+---
+# Native Image（さらっと）
+
+- 事前に機械語までフルコンパイル
+- 起動が速い
+- 実行速度（スループット）は速くない
+  - JITコンパイルによる最適化とかはない
+- GC機能とかは付いてくる
+- バイナリはそこまで小さくない
+- 使える機能に制限がある
+---
+class: middle, center
+
+# GraalVMで遊んでみよう！
+---
+class: narrow-code
+
+### Oracleのページからダウンロードしてきて...
+- 大量の実行コマンドが
+  - jsとかnodeとかnpmとかある
+  - js以外の言語はデフォルトでは入っていないよう
+```shell
+/graalvm-1.0.0-rc1/Contents/Home/bin  % ls
+appletviewer*   javapackager*   jsadebugd*      policytool*
+extcheck*       jcmd*           jstack*         polyglot@
+gemasrv@        jconsole*       jstat*          rmic*
+gu@             jdb*            jstatd*         rmid*
+idlj*           jdeps*          jvisualvm*      rmiregistry*
+jar*            jhat*           keytool*        schemagen*
+jarsigner*      jinfo*          lli@            serialver*
+java*           jjs*            native-image@   servertool*
+javac*          jmap*           native2ascii*   tnameserv*
+javadoc*        jmc*            node@           unpack200*
+javafxpackager* jps*            npm@            wsgen*
+javah*          jrunscript*     orbd*           wsimport*
+javap*          js@             pack200*        xjc*
+```
+---
+### 社内に転がってたScalaコードでベンチマーク
+- とある機械学習タスク
+  - CommunityEditionではtask1,task2ともに速くなった
+  - EnterpriseEditionではtask2はさらに速くなったが、task1はむしろ劇遅になった
+
+OpenJDK 1.8
+```shell
+> jmh:run -i 30 -wi 5 -f1 -t 1
+[info] task1  thrpt   30  544.705 ± 4.786  ops/s
+[info] task2  thrpt   30  222.443 ± 1.082  ops/s
+```
+
+GraalVM（CommunityEdition）1.0.0-rc1
+```shell
+> jmh:run -i 30 -wi 5 -f1 -t 1 -jvm /home/t_sakai/graalvm-ce-1.0.0-rc1/bin/java
+[info] task1  thrpt   30  636.511 ± 5.198  ops/s
+[info] task2  thrpt   30  252.145 ± 2.368  ops/s
+```
+
+GraalVM（EnterpriseEdition）1.0.0-rc1
+```shell
+> jmh:run -i 30 -wi 5 -f1 -t 1 -jvm /home/t_sakai/graalvm-ee-1.0.0-rc1/bin/java
+[info] task1  thrpt   30  337.109 ± 46.888  ops/s
+[info] task2  thrpt   30  290.675 ±  7.935  ops/s
+```
 ---
 # ScalaからJavaScriptを呼んでみる
 
+```sbt
+// build.sbt
+libraryDependencies += "org.graalvm" % "graal-sdk" % "1.0.0-rc1"
+```
+
+Polyglot用のSDKをimportする必要がある
 ```tut:silent
 import org.graalvm.polyglot.Context
 val context = Context.create()
@@ -61,11 +204,73 @@ context.eval("js", "(1 + 1)").asInt
 ```
 
 ---
+class: middle
+
+- JavaScriptっぽい挙動
+
 ```tut:book
 5 == "5"
 context.eval("js", "(5 == '5')").asBoolean
 context.eval("js", "(5 === '5')").asBoolean
 ```
+
+- ScalaからJSへ値を渡すことも
+
+```tut:book
+context.getPolyglotBindings.putMember("text", "hello")
+context.eval("js", "(Interop.import('text') == 'hello')").asBoolean
+```
+---
+class: center, middle
+
+# Scalaへの影響
+---
+## 1. 速い
+
+- VM置き換えるだけで20%とか速くなるのはかなり大きい
+- 今動いているScalaプログラムをGraalVMに置き換える可能性
+  - まだRC版しか出てないので、もう少し待ちかな
+  - まずは新規プロダクトとかマイクロサービスとかで知見を貯めたい
+- Twitter社ではすでに本番投入してるらしい
+  - 「サーバ台数減らせて$XXX Millionの削減になったよ！」みたいなこと言ってた
+  - この会社はMySQLも改造して使ってたしすごいなー
+---
+## 2. 他の言語との通信の仕方が変わる
+
+- 言語ごとにプロセスやサーバを分離しなくていい
+- JSONなどへのSerializationも要らない
+- RPCもしなくていい
+- 性能も良いはず（？）
+  - ベンチマークとりたい
+---
+## 3. Scalaで実装された言語が現れる！？
+
+- 各言語をTruffleで実装する際はJavaで書ける -> Scalaでも書けそう
+  - オレオレ言語をScalaで実装したり
+    - 関数型ゴリゴリな言語実装を見てみたい（個人的感想）
+    - むしろ誰かやってください 
+  - しかも優秀なJITコンパイラと歴戦のHotSpotVMで実行されるからそこそこ速いはず
+  - Java + Truffleで四則演算を実装した例 -> https://www.slideshare.net/jyukutyo/jjug-ccc-2017-fall-jvm
+- 各言語のTruffle実装はJavaなので読みやすい
+  - プログラミング言語がどうやって実装されているか勉強モチベ☝︎☝︎☝︎
+  - コンパイラの気持ちが分かるようになる（そうです）
+---
+# 懸念点
+
+- Oracleリスク
+- まだ枯れていないVMなのでバグがたくさん残ってるかも
+- Polyglotに依存しすぎると、Graalから離れられなくなる
+- ドキュメントはまだまだ
+  - 特にScalaでPolyglotやるのはまだ辛そう
+  - Truffle関連もドキュメントなくて辛い
+---
+# 情報収集
+- 体系的な日本語文献はまだほぼない
+  - この人はすごく頑張ってくれている -> http://www.sakatakoichi.com/
+- 英語でもドキュメントの質としてはまだまだ
+- YouTubeに上がってるカンファレンス動画が最も良い教材
+  - それドキュメントに書いてくれよ！ってこともたくさん喋ってる
+  - リスニングの練習にもなる
 ---
 class: center, middle
 
